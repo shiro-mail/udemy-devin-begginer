@@ -1,50 +1,198 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>ToDo App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>出荷データ表示システム</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 500px;
-            margin: 40px auto;
-            padding: 20px;
-            border: 1px solid #ccc;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
         h1 {
             text-align: center;
-        }
-        form {
-            margin-bottom: 20px;
-        }
-        input[type="text"] {
-            width: 80%;
-            padding: 8px;
-        }
-        input[type="submit"] {
-            padding: 8px 12px;
-        }
-        ul {
-            list-style: none;
-            padding: 0;
-        }
-        li {
-            background: #f5f5f5;
+            color: white;
+            font-size: 2.5rem;
             margin-bottom: 10px;
-            padding: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .subtitle {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.1rem;
+            margin-bottom: 40px;
+        }
+
+        .data-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+            overflow-x: auto;
+        }
+
+        .data-count {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+            color: #666;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        th, td {
+            padding: 12px 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            vertical-align: top;
+        }
+
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8f9ff;
+        }
+
+        tr:hover {
+            background-color: #f0f2ff;
+        }
+
+        .parts-list {
+            max-width: 200px;
+        }
+
+        .parts-item {
+            margin-bottom: 5px;
+            padding: 2px 0;
+        }
+
+        .amount {
+            text-align: right;
+            font-weight: 600;
+        }
+
+        .total-amount {
+            background-color: #e8f4fd;
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .data-card {
+                padding: 20px;
+            }
+            
+            table {
+                font-size: 12px;
+            }
+            
+            th, td {
+                padding: 8px 4px;
+            }
         }
     </style>
 </head>
 <body>
-    <h1>My ToDo List</h1>
-    <form action="/add" method="POST">
-        <input type="text" name="title" placeholder="Enter a new task" required>
-        <input type="submit" value="Add">
-    </form>
-    <ul>
-        {% for task in tasks %}
-            <li>{{ task.title }}</li>
-        {% endfor %}
-    </ul>
+    <div class="container">
+        <h1>📊 出荷データ表示システム</h1>
+        <p class="subtitle">JSONデータの表示</p>
+        
+        <div class="data-card">
+            <div class="data-count">
+                総件数: {{ shipping_data|length }} 件
+            </div>
+            
+            {% if shipping_data %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>出荷日</th>
+                        <th>受注番号</th>
+                        <th>納入先番号</th>
+                        <th>担当者</th>
+                        <th>部品番号</th>
+                        <th>部品名</th>
+                        <th>数量</th>
+                        <th>売上単価</th>
+                        <th>売上金額</th>
+                        <th>運賃</th>
+                        <th>税抜合計</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in shipping_data %}
+                    <tr>
+                        <td>{{ item.出荷日 }}</td>
+                        <td>{{ item.受注番号 }}</td>
+                        <td>{{ item.納入先番号 }}</td>
+                        <td>{{ item.担当者 }}</td>
+                        <td class="parts-list">
+                            {% for part_no in item.部品番号 %}
+                            <div class="parts-item">{{ part_no }}</div>
+                            {% endfor %}
+                        </td>
+                        <td class="parts-list">
+                            {% for part_name in item.部品名 %}
+                            <div class="parts-item">{{ part_name }}</div>
+                            {% endfor %}
+                        </td>
+                        <td>
+                            {% for qty in item.数量 %}
+                            <div class="parts-item">{{ qty }}</div>
+                            {% endfor %}
+                        </td>
+                        <td class="amount">
+                            {% for price in item.売上単価 %}
+                            <div class="parts-item">¥{{ price }}</div>
+                            {% endfor %}
+                        </td>
+                        <td class="amount">
+                            {% for amount in item.売上金額 %}
+                            <div class="parts-item">¥{{ amount }}</div>
+                            {% endfor %}
+                        </td>
+                        <td class="amount">¥{{ item.運賃 }}</td>
+                        <td class="amount total-amount">¥{{ item.税抜合計 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p style="text-align: center; color: #666; margin-top: 40px;">
+                データが見つかりません。
+            </p>
+            {% endif %}
+        </div>
+    </div>
 </body>
 </html>
