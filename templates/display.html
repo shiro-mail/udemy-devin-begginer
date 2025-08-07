@@ -23,8 +23,12 @@
             margin: 0 auto;
         }
 
-        h1 {
+        .header {
             text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h1 {
             color: white;
             font-size: 2.5rem;
             margin-bottom: 10px;
@@ -32,10 +36,25 @@
         }
 
         .subtitle {
-            text-align: center;
             color: rgba(255, 255, 255, 0.9);
             font-size: 1.1rem;
-            margin-bottom: 40px;
+            margin-bottom: 20px;
+        }
+
+        .back-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
         }
 
         .data-card {
@@ -103,6 +122,13 @@
             font-weight: bold;
         }
 
+        .no-data {
+            text-align: center;
+            color: #666;
+            margin-top: 40px;
+            padding: 40px;
+        }
+
         @media (max-width: 768px) {
             h1 {
                 font-size: 2rem;
@@ -124,8 +150,11 @@
 </head>
 <body>
     <div class="container">
-        <h1>📊 出荷データ表示システム</h1>
-        <p class="subtitle">JSONデータの表示</p>
+        <div class="header">
+            <h1>📊 出荷データ表示システム</h1>
+            <p class="subtitle">JSONデータの表示</p>
+            <a href="/" class="back-btn">← 新しいファイルを選択</a>
+        </div>
         
         <div class="data-card">
             <div class="data-count">
@@ -188,9 +217,10 @@
                 </tbody>
             </table>
             {% else %}
-            <p style="text-align: center; color: #666; margin-top: 40px;">
-                データが見つかりません。
-            </p>
+            <div class="no-data">
+                <p>データが見つかりません。</p>
+                <p>JSONファイルの形式を確認してください。</p>
+            </div>
             {% endif %}
         </div>
     </div>

@@ -1,97 +1,75 @@
-from flask import Flask, render_template, request, redirect, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, session
 import json
 import os
-import uuid
-from datetime import datetime
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-DATA_FILE = 'data.json'
+app.secret_key = 'your-secret-key-here'
+app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
-def load_tasks():
-    if os.path.exists(DATA_FILE):
-        try:
-            with open(DATA_FILE, 'r', encoding='utf-8') as f:
-                tasks = json.load(f)
-                if isinstance(tasks, list) and len(tasks) > 0:
-                    if isinstance(tasks[0], str) or (isinstance(tasks[0], dict) and 'id' not in tasks[0]):
-                        migrated_tasks = []
-                        for i, task in enumerate(tasks):
-                            if isinstance(task, str):
-                                migrated_tasks.append({
-                                    'id': str(uuid.uuid4()),
-                                    'title': task,
-                                    'completed': False,
-                                    'created_at': datetime.now().isoformat()
-                                })
-                            elif isinstance(task, dict) and 'title' in task:
-                                migrated_tasks.append({
-                                    'id': str(uuid.uuid4()),
-                                    'title': task['title'],
-                                    'completed': task.get('completed', False),
-                                    'created_at': datetime.now().isoformat()
-                                })
-                        save_tasks(migrated_tasks)
-                        return migrated_tasks
-                return tasks
-        except (json.JSONDecodeError, IOError):
-            return []
-    return []
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-def save_tasks(tasks):
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() == 'json'
+
+def load_shipping_data_from_file(filepath):
     try:
-        with open(DATA_FILE, 'w', encoding='utf-8') as f:
-            json.dump(tasks, f, ensure_ascii=False, indent=2)
-    except IOError:
-        pass
+        with open(filepath, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            return data
+    except (json.JSONDecodeError, IOError):
+        return []
 
 @app.route('/')
 def index():
-    tasks = load_tasks()
-    return render_template('index.html', tasks=tasks)
+    return render_template('upload.html')
 
-@app.route('/add', methods=['POST'])
-def add():
-    task_title = request.form.get('title', '').strip()
-    if task_title:
-        tasks = load_tasks()
-        new_task = {
-            'id': str(uuid.uuid4()),
-            'title': task_title,
-            'completed': False,
-            'created_at': datetime.now().isoformat()
-        }
-        tasks.append(new_task)
-        save_tasks(tasks)
-    return redirect('/')
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'file' not in request.files:
+        flash('ファイルが選択されていません')
+        return redirect(request.url)
+    
+    file = request.files['file']
+    if file.filename == '':
+        flash('ファイルが選択されていません')
+        return redirect(request.url)
+    
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        
+        session['uploaded_file'] = filepath
+        return redirect(url_for('display_data'))
+    else:
+        flash('JSONファイルのみアップロード可能です')
+        return redirect(request.url)
 
-@app.route('/delete/<task_id>', methods=['POST'])
-def delete(task_id):
-    tasks = load_tasks()
-    tasks = [task for task in tasks if task.get('id') != task_id]
-    save_tasks(tasks)
-    return redirect('/')
+@app.route('/display')
+def display_data():
+    if 'uploaded_file' not in session:
+        flash('先にJSONファイルをアップロードしてください')
+        return redirect(url_for('index'))
+    
+    filepath = session['uploaded_file']
+    if not os.path.exists(filepath):
+        flash('アップロードされたファイルが見つかりません')
+        return redirect(url_for('index'))
+    
+    shipping_data = load_shipping_data_from_file(filepath)
+    return render_template('display.html', shipping_data=shipping_data)
 
-@app.route('/toggle/<task_id>', methods=['POST'])
-def toggle(task_id):
-    tasks = load_tasks()
-    for task in tasks:
-        if task.get('id') == task_id:
-            task['completed'] = not task.get('completed', False)
-            break
-    save_tasks(tasks)
-    return redirect('/')
-
-@app.route('/edit/<task_id>', methods=['POST'])
-def edit(task_id):
-    new_title = request.form.get('title', '').strip()
-    if new_title:
-        tasks = load_tasks()
-        for task in tasks:
-            if task.get('id') == task_id:
-                task['title'] = new_title
-                break
-        save_tasks(tasks)
-    return redirect('/')
+@app.route('/sample')
+def sample_data():
+    sample_file = 'sample_data.json'
+    if os.path.exists(sample_file):
+        session['uploaded_file'] = sample_file
+        return redirect(url_for('display_data'))
+    else:
+        flash('サンプルデータが見つかりません')
+        return redirect(url_for('index'))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
